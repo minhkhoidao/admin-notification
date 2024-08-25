@@ -20,7 +20,7 @@ var refreshTokenExpiry = 24
 func (us *SignupController) SignupController(c *gin.Context) {
 	var request models.SignupRequest
 
-	err := c.ShouldBind(&request)
+	err := c.ShouldBindJSON(&request)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: err.Error()})
 		return

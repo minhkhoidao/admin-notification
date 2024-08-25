@@ -15,7 +15,7 @@ type LoginController struct {
 
 func (lc *LoginController) LoginController(c *gin.Context) {
 	var request models.LoginRequest
-	err := c.ShouldBind(&request)
+	err := c.ShouldBindJSON(&request)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: err.Error()})
 		return
