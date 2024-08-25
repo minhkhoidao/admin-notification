@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type CampaignType string
 type CampaignEvent string
 
@@ -13,18 +15,23 @@ const (
 )
 
 type Campaigns struct {
-	ID       int          `json:"id" gorm:"primaryKey"`
-	Template TemplateType `json:"template"`
-	CampaignType
-	CampaignEvent
-	Content      string `json:"content"`
-	SaveTemplate bool   `json:"save_template"`
+	ID             uint          `json:"id" gorm:"primaryKey"`
+	Template       TemplateType  `json:"template"`
+	Type           CampaignType  `json:"campaign_type"`
+	Event          CampaignEvent `json:"campaign_event"`
+	Content        string        `json:"content"`
+	SaveTemplate   bool          `json:"save_template"`
+	NotificationID uint          `json:"notification_id"` // Foreign key for Notification
+	Notification   Notification  `json:"notification" gorm:"foreignKey:NotificationID;references:ID"`
+	CreatedAt      time.Time     `json:"created_at"`
+	UpdatedAt      time.Time     `json:"updated_at"`
 }
 
 type CampaignsRequest struct {
-	Template TemplateType `json:"template"`
-	CampaignType
-	CampaignEvent
-	Content      string `json:"content"`
-	SaveTemplate bool   `json:"save_template"`
+	Template       TemplateType  `json:"template"`
+	Type           CampaignType  `json:"campaign_type"`
+	Event          CampaignEvent `json:"campaign_event"`
+	Content        string        `json:"content"`
+	SaveTemplate   bool          `json:"save_template"`
+	NotificationID uint          `json:"notification_id"` // Foreign key for Notification
 }

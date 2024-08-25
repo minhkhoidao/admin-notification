@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type TemplateType string
 
 const (
@@ -10,16 +12,21 @@ const (
 )
 
 type Notification struct {
-	ID           int          `json:"id" gorm:"primaryKey"`
+	ID           uint         `json:"id" gorm:"primaryKey"`
 	Template     TemplateType `json:"template"`
-	CampaignType string       `json:"campaign_type"`
+	CampaignType CampaignType `json:"campaign_type"`
 	Content      string       `json:"content"`
+	CampaignID   uint         `gorm:"not null"`
+	Campaign     *Campaigns   `gorm:"foreignKey:CampaignID"`
+	CreatedAt    time.Time    `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt    time.Time    `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 type NotificationRequest struct {
 	Template     TemplateType `json:"template"`
-	CampaignType string       `json:"campaign_type"`
+	CampaignType CampaignType `json:"campaign_type"`
 	Content      string       `json:"content"`
+	CampaignID   uint         `json:"campaign_id"`
 }
 
 type NotificationResponse struct {

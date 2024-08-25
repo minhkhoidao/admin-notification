@@ -18,6 +18,6 @@ func Setup(timeout time.Duration, db *gorm.DB) *gin.Engine {
 	protectedRouter := router.Group("/api")
 	protectedRouter.Use(middlewares.JwtAuthMiddleware("secret"))
 	NewNotificationRoute(timeout, protectedRouter, db)
-
+	NewCampaignRoute(timeout, protectedRouter, db)
 	return router
 }

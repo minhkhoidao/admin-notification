@@ -3,6 +3,7 @@ package repository
 import (
 	"admin-backend/models"
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -21,24 +22,27 @@ func NewNotificationRepository(db *gorm.DB) *notificationRepository {
 		db: db,
 	}
 }
-
 func (r *notificationRepository) Create(ctx context.Context, notification *models.Notification) error {
-	return r.db.WithContext(ctx).Create(notification).Error
+	notification.CreatedAt = time.Now()
+	notification.UpdatedAt = time.Now()
+	return r.db.WithContext(ctx).Preload("Campaigns").Create(notification).Error
 }
 
 func (r *notificationRepository) GetAllNotification(ctx context.Context, page int, pageSize int) ([]models.Notification, int64, error) {
 	var notifications []models.Notification
 	var total int64
 
-	// Count the total number of notifications
-	err := r.db.WithContext(ctx).Model(&models.Notification{}).Count(&total).Error
-	if err != nil {
+	// Count total notifications
+	if err := r.db.WithContext(ctx).Model(&models.Notification{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Fetch the notifications with pagination
-	err = r.db.WithContext(ctx).Limit(pageSize).Offset((page - 1) * pageSize).Find(&notifications).Error
-	if err != nil {
+	// Retrieve notifications with pagination and preload associated campaigns
+	if err := r.db.WithContext(ctx).
+		Limit(pageSize).
+		Offset((page - 1) * pageSize).
+		Preload("Campaign").
+		Find(&notifications).Error; err != nil {
 		return nil, 0, err
 	}
 
