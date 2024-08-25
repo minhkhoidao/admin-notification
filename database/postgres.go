@@ -88,7 +88,7 @@ func (s *service) Close() error {
 }
 
 func (s *service) Migrate() error {
-	err := s.db.AutoMigrate(&models.User{})
+	err := s.db.AutoMigrate(&models.User{}, &models.Notification{}, &models.Campaigns{})
 	if err != nil {
 		return fmt.Errorf("failed to auto migrate: %v", err)
 	}

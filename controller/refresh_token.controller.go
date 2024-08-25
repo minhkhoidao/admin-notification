@@ -16,7 +16,7 @@ type RefreshTokenController struct {
 func (rc *RefreshTokenController) RefreshTokenController(c *gin.Context) {
 	var request models.RefreshTokenRequest
 
-	if err := c.ShouldBind(&request); err != nil {
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: err.Error()})
 		return
 	}
