@@ -1,0 +1,5 @@
+- Project using version go 1.23, gorm
+- Database: postgres, redis.
+- Run :
+  - go mod tidy
+  - docker compose up -d
