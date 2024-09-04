@@ -7,31 +7,61 @@ import (
 	"time"
 )
 
-type NotificationService interface {
-	CreateNotification(ctx context.Context, notification *models.Notification) error
-	GetAllNotification(ctx context.Context, page int, pageSize int) ([]models.Notification, int64, error)
+type NotificationService struct {
+	repo    *repository.NotificationRepository
+	timeout *time.Duration
 }
 
-type notificationService struct {
-	notificationRepo repository.NotificationRepository
-	contextTimeout   time.Duration
-}
-
-func NewNotificationService(notificationRepo repository.NotificationRepository, contextTimeout time.Duration) NotificationService {
-	return &notificationService{
-		notificationRepo: notificationRepo,
-		contextTimeout:   contextTimeout,
+func NewNotificationService(repo *repository.NotificationRepository, timeout *time.Duration) *NotificationService {
+	return &NotificationService{
+		repo:    repo,
+		timeout: timeout,
 	}
 }
 
-func (s *notificationService) CreateNotification(ctx context.Context, notification *models.Notification) error {
-	ctx, cancel := context.WithTimeout(ctx, s.contextTimeout)
+func (s *NotificationService) GetAllNotifications(ctx context.Context) ([]models.Notification, error) {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
 	defer cancel()
-	return s.notificationRepo.Create(ctx, notification)
+	return s.repo.GetAllNotifications(ctx)
 }
 
-func (s *notificationService) GetAllNotification(ctx context.Context, page int, pageSize int) ([]models.Notification, int64, error) {
-	ctx, cancel := context.WithTimeout(ctx, s.contextTimeout)
+func (s *NotificationService) CreateNotification(ctx context.Context, notification *models.Notification) error {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
 	defer cancel()
-	return s.notificationRepo.GetAllNotification(ctx, page, pageSize)
+	return s.repo.CreateNotification(ctx, notification)
+}
+
+// Get all notifications by campaign ID
+func (s *NotificationService) GetNotificationsByCampaignID(ctx context.Context, campaignID uint) ([]models.Notification, error) {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
+	defer cancel()
+	return s.repo.GetNotificationsByCampaignID(ctx, campaignID)
+}
+
+// Get all pending notifications by campaign ID
+func (s *NotificationService) GetPendingNotificationsByCampaignID(ctx context.Context, campaignID uint) ([]models.Notification, error) {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
+	defer cancel()
+	return s.repo.GetPendingNotificationsByCampaignID(ctx, campaignID)
+}
+
+// Update notification status
+func (s *NotificationService) UpdateNotificationStatus(ctx context.Context, notification *models.Notification, status models.NotificationStatus) error {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
+	defer cancel()
+	return s.repo.UpdateNotificationStatus(ctx, notification, status)
+}
+
+// Get a notification by ID
+func (s *NotificationService) GetNotificationByID(ctx context.Context, notificationID uint) (*models.Notification, error) {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
+	defer cancel()
+	return s.repo.GetNotificationByID(ctx, notificationID)
+}
+
+// Associate a notification with a campaign
+func (s *NotificationService) AssociateNotificationWithCampaign(ctx context.Context, notificationID uint, campaignID uint) error {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
+	defer cancel()
+	return s.repo.AssociateWithCampaign(ctx, notificationID, campaignID)
 }

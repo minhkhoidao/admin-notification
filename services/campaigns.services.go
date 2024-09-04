@@ -7,31 +7,42 @@ import (
 	"time"
 )
 
-type CampaignsService interface {
-	CreateNewCampaign(ctx context.Context, campaigns *models.Campaigns) error
-	GetAllCampaigns(ctx context.Context, page int, pageSize int) ([]models.Campaigns, int64, error)
+type CampaignService struct {
+	repo    *repository.CampaignRepository
+	timeout *time.Duration
 }
 
-type campaignService struct {
-	cr           repository.CampaignRepository
-	timeDuration time.Duration
+func NewCampaignService(repo *repository.CampaignRepository, timeout *time.Duration) *CampaignService {
+	return &CampaignService{repo: repo, timeout: timeout}
 }
 
-func NewCampaignService(cr repository.CampaignRepository, timeDuration time.Duration) *campaignService {
-	return &campaignService{
-		cr:           cr,
-		timeDuration: timeDuration,
-	}
-}
-
-func (s *campaignService) CreateNewCampaign(ctx context.Context, campaigns *models.Campaigns) error {
-	ctx, cancel := context.WithTimeout(ctx, s.timeDuration)
+// Get all campaigns with notifications
+func (s *CampaignService) GetAllCampaigns(ctx context.Context) ([]models.Campaign, error) {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
 	defer cancel()
-	return s.cr.CreateNewCampaign(ctx, campaigns)
+	return s.repo.GetAllCampaigns(ctx)
 }
 
-func (s *campaignService) GetAllCampaigns(ctx context.Context, page int, pageSize int) ([]models.Campaigns, int64, error) {
-	ctx, cancel := context.WithTimeout(ctx, s.timeDuration)
+func (s *CampaignService) GetCampaignsForProcessing(ctx context.Context) ([]models.Campaign, error) {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
 	defer cancel()
-	return s.cr.GetAllCampaign(ctx, page, pageSize)
+	return s.repo.GetCampaignsForProcessing(ctx)
+}
+
+func (s *CampaignService) CompleteCampaign(ctx context.Context, campaign *models.Campaign) error {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
+	defer cancel()
+	return s.repo.UpdateCampaignStatus(ctx, campaign, models.CampaignStopped)
+}
+
+func (s *CampaignService) CreateCampaign(ctx context.Context, campaign *models.Campaign) error {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
+	defer cancel()
+	return s.repo.CreateCampaign(ctx, campaign)
+}
+
+func (s *CampaignService) GetCampaignWithNotifications(ctx context.Context, campaignID uint) (*models.Campaign, error) {
+	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
+	defer cancel()
+	return s.repo.GetCampaignWithNotifications(ctx, campaignID)
 }

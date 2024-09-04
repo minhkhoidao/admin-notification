@@ -11,10 +11,11 @@ import (
 )
 
 func NewNotificationRoute(timeout time.Duration, group *gin.RouterGroup, db *gorm.DB) {
-	nr := repository.NewNotificationRepository(db)
-	controller := controller.NotificationController{
-		NotiService: services.NewNotificationService(nr, timeout),
-	}
-	group.POST("/notification", controller.CreateNotification)
-	group.GET("/notification", controller.GetAllNotification)
+	notiRepo := repository.NewNotificationRepository(db)
+	notificationService := services.NewNotificationService(notiRepo, &timeout)
+
+	notificationHandler := controller.NewNotificationHandler(notificationService)
+
+	group.POST("/notification", notificationHandler.CreateNotification)
+	group.GET("/notification", notificationHandler.GetAllNotifications)
 }
