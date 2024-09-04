@@ -11,10 +11,14 @@ import (
 )
 
 func NewCampaignRoute(timeout time.Duration, group *gin.RouterGroup, db *gorm.DB) {
-	cr := repository.NewCampaignRepository(db)
-	controller := controller.CampaignsController{
-		CampaignsService: services.NewCampaignService(cr, timeout),
-	}
+	campaignRepo := repository.NewCampaignRepository(db)
+	notiRepo := repository.NewNotificationRepository(db)
 
-	group.POST("/campaigns", controller.CreateCampaignController)
+	campaignService := services.NewCampaignService(campaignRepo, &timeout)
+	notificationService := services.NewNotificationService(notiRepo, &timeout)
+
+	campaignHandler := controller.NewCampaignHandler(campaignService, notificationService)
+
+	group.POST("/campaigns", campaignHandler.CreateCampaign)
+	group.GET("/campaigns", campaignHandler.GetAllCampaigns)
 }

@@ -3,75 +3,58 @@ package repository
 import (
 	"admin-backend/models"
 	"context"
-	"fmt"
-	"log"
+	"time"
 
 	"gorm.io/gorm"
 )
 
-type campaignRepository struct {
+type CampaignRepository struct {
 	db *gorm.DB
 }
 
-type CampaignRepository interface {
-	CreateNewCampaign(ctx context.Context, campaign *models.Campaigns) error
-	GetAllCampaign(ctx context.Context, page int, pageSize int) ([]models.Campaigns, int64, error)
+func NewCampaignRepository(db *gorm.DB) *CampaignRepository {
+	return &CampaignRepository{db: db}
 }
 
-func NewCampaignRepository(db *gorm.DB) *campaignRepository {
-	return &campaignRepository{
-		db: db,
+// Get all campaigns with their notifications
+func (r *CampaignRepository) GetAllCampaigns(ctx context.Context) ([]models.Campaign, error) {
+	var campaigns []models.Campaign
+	if err := r.db.WithContext(ctx).
+		Preload("Notifications"). // Preload related notifications
+		Find(&campaigns).Error; err != nil {
+		return nil, err
 	}
+	return campaigns, nil
 }
 
-func (r *campaignRepository) CreateNewCampaign(ctx context.Context, campaign *models.Campaigns) error {
-	tx := r.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			log.Printf("Recovered in CreateNewCampaign: %v", r)
-		}
-	}()
-
-	if campaign.NotificationID == 0 {
-		tx.Rollback()
-		return fmt.Errorf("notification ID is not set")
+func (r *CampaignRepository) GetCampaignWithNotifications(ctx context.Context, campaignID uint) (*models.Campaign, error) {
+	var campaign models.Campaign
+	if err := r.db.WithContext(ctx).
+		Preload("Notifications"). // Preload related notifications
+		First(&campaign, campaignID).Error; err != nil {
+		return nil, err
 	}
-
-	var notification models.Notification
-	if err := tx.First(&notification, campaign.NotificationID).Error; err != nil {
-		// Handle error, e.g., return an error response
-		tx.Rollback()
-		return err
-	}
-
-	if err := tx.Create(&campaign).Error; err != nil {
-		log.Printf("Error creating campaign: %v", err)
-		tx.Rollback()
-		return err
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		log.Printf("Error committing transaction: %v", err)
-		return err
-	}
-
-	return nil
+	return &campaign, nil
 }
 
-func (r *campaignRepository) GetAllCampaign(ctx context.Context, page int, pageSize int) ([]models.Campaigns, int64, error) {
-	var campaigns []models.Campaigns
-	var count int64
+func (r *CampaignRepository) GetCampaignsForProcessing(ctx context.Context) ([]models.Campaign, error) {
+	var campaigns []models.Campaign
+	now := time.Now()
 
-	err := r.db.WithContext(ctx).Find(&campaigns).Count(&count).Error
-	if err != nil {
-		return nil, 0, err
+	if err := r.db.WithContext(ctx).
+		Where("status = ? AND start_at <= ? AND end_at >= ?", models.CampaignActive, now, now).
+		Order("priority DESC").
+		Find(&campaigns).Error; err != nil {
+		return nil, err
 	}
+	return campaigns, nil
+}
 
-	err = r.db.WithContext(ctx).Limit(pageSize).Offset((page - 1) * pageSize).Find(&campaigns).Error
-	if err != nil {
-		return nil, 0, err
-	}
+func (r *CampaignRepository) UpdateCampaignStatus(ctx context.Context, campaign *models.Campaign, status models.CampaignStatus) error {
+	campaign.Status = status
+	return r.db.WithContext(ctx).Save(campaign).Error
+}
 
-	return campaigns, count, nil
+func (r *CampaignRepository) CreateCampaign(ctx context.Context, campaign *models.Campaign) error {
+	return r.db.WithContext(ctx).Create(campaign).Error
 }

@@ -9,55 +9,70 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type NotificationController struct {
-	NotiService services.NotificationService
+type NotificationHandler struct {
+	notificationService *services.NotificationService
 }
 
-func (ns *NotificationController) CreateNotification(c *gin.Context) {
-	var request models.NotificationRequest
-	err := c.ShouldBindJSON(&request)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: err.Error()})
-		return
-	}
-	notification := models.Notification{
-		Template:     request.Template,
-		CampaignType: request.CampaignType,
-		Content:      request.Content,
-	}
-
-	err = ns.NotiService.CreateNotification(c, &notification)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: err.Error()})
-	}
-
-	c.JSON(200, notification)
+func NewNotificationHandler(notificationService *services.NotificationService) *NotificationHandler {
+	return &NotificationHandler{notificationService: notificationService}
 }
 
-func (ns *NotificationController) GetAllNotification(c *gin.Context) {
-	pageStr := c.Query("page")
-	pageSizeStr := c.Query("pageSize")
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page < 1 {
-		page = 1
+// Create a new notification for a specific campaign
+func (h *NotificationHandler) CreateNotification(c *gin.Context) {
+	var req struct {
+		Content     string `json:"content"`
+		CampaignID  *uint  `json:"campaign_id,omitempty"` // CampaignID must be provided
+		Template    string `json:"template"`
+		Description string `json:"description"`
 	}
 
-	pageSize, err := strconv.Atoi(pageSizeStr)
-	if err != nil || pageSize < 1 {
-		pageSize = 10
-	}
-
-	notifications, total, err := ns.NotiService.GetAllNotification(c, page, pageSize)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: err.Error()})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	response := models.NotificationResponse{
-		Data:  notifications,
-		Total: total,
+	notification := &models.Notification{
+		Content:     req.Content,
+		CampaignID:  req.CampaignID, // Associate notification with campaign
+		Status:      models.NotificationPending,
+		Template:    req.Template,
+		Description: req.Description,
 	}
 
-	c.JSON(http.StatusOK, response)
+	if err := h.notificationService.CreateNotification(c.Request.Context(), notification); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, notification)
+}
+
+func (h *NotificationHandler) GetNotificationsByCampaignID(c *gin.Context) {
+	// Parse campaign ID from URL parameter
+	campaignIDStr := c.Param("id")
+	campaignID, err := strconv.ParseUint(campaignIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid campaign ID"})
+		return
+	}
+
+	notifications, err := h.notificationService.GetNotificationsByCampaignID(c.Request.Context(), uint(campaignID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, notifications)
+}
+
+func (h *NotificationHandler) GetAllNotifications(c *gin.Context) {
+	// Fetch all notifications with campaigns
+	notifications, err := h.notificationService.GetAllNotifications(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Return the list of notifications as JSON
+	c.JSON(http.StatusOK, notifications)
 }
