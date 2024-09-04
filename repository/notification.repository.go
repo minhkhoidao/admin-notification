@@ -3,6 +3,7 @@ package repository
 import (
 	"admin-backend/models"
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -39,14 +40,18 @@ func (r *NotificationRepository) GetNotificationsByCampaignID(ctx context.Contex
 	return notifications, nil
 }
 
-// Get all pending notifications for a specific campaign
-func (r *NotificationRepository) GetPendingNotificationsByCampaignID(ctx context.Context, campaignID uint) ([]models.Notification, error) {
+// Get pending notifications that need to be sent
+func (r *NotificationRepository) GetPendingNotifications(ctx context.Context) ([]models.Notification, error) {
 	var notifications []models.Notification
+	now := time.Now()
+
 	if err := r.db.WithContext(ctx).
-		Where("campaign_id = ? AND status = ?", campaignID, models.NotificationPending).
+		Where("status = ? AND sent_at IS NULL", models.NotificationPending).
+		Where("created_at <= ?", now).
 		Find(&notifications).Error; err != nil {
 		return nil, err
 	}
+
 	return notifications, nil
 }
 
@@ -71,4 +76,12 @@ func (r *NotificationRepository) AssociateWithCampaign(ctx context.Context, noti
 	return r.db.WithContext(ctx).Model(&models.Notification{}).
 		Where("id = ?", notificationID).
 		Update("campaign_id", campaignID).Error
+}
+
+// Mark a notification as sent
+func (r *NotificationRepository) MarkAsSent(ctx context.Context, notification *models.Notification) error {
+	now := time.Now()
+	notification.Status = models.NotificationSent
+	notification.SentAt = &now
+	return r.db.WithContext(ctx).Save(notification).Error
 }

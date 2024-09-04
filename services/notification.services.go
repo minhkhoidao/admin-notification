@@ -38,13 +38,6 @@ func (s *NotificationService) GetNotificationsByCampaignID(ctx context.Context, 
 	return s.repo.GetNotificationsByCampaignID(ctx, campaignID)
 }
 
-// Get all pending notifications by campaign ID
-func (s *NotificationService) GetPendingNotificationsByCampaignID(ctx context.Context, campaignID uint) ([]models.Notification, error) {
-	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
-	defer cancel()
-	return s.repo.GetPendingNotificationsByCampaignID(ctx, campaignID)
-}
-
 // Update notification status
 func (s *NotificationService) UpdateNotificationStatus(ctx context.Context, notification *models.Notification, status models.NotificationStatus) error {
 	ctx, cancel := context.WithTimeout(ctx, *s.timeout)
